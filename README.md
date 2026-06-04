@@ -12,6 +12,7 @@ A lightweight Node.js + Express + TypeScript + SQLite application that acts as a
 
 - Node.js (v18+ recommended)
 - npm
+- Docker and Docker Compose (if deploying via containers)
 
 ## Installation
 
@@ -26,7 +27,7 @@ A lightweight Node.js + Express + TypeScript + SQLite application that acts as a
    ```
 
 ### Configuration (`.env`)
-- `PORT`: The port the server runs on (default: `3000`).
+- `PORT`: The port the server runs on (default: `18273`).
 - `ALLOW_WRITE_QUERIES`: Set to `true` to allow modifying database tables directly via the `/query` endpoint. Default is `false` (read-only allowed).
 
 ## Development
@@ -36,7 +37,7 @@ To run the server locally with auto-reload:
 npm run dev
 ```
 
-## Production Build
+## Production Build (Local Host)
 
 To compile TypeScript source to JavaScript:
 ```bash
@@ -48,6 +49,50 @@ To run the compiled output:
 npm start
 ```
 
+## Docker & Deployment
+
+The application is configured to build directly from the remote Git repository (`master` branch). The SQLite database is persisted inside a Docker volume so data survives container updates and restarts.
+
+### Initial Deployment
+
+Run this command on your deployment server (e.g. AWS EC2) or local environment:
+```bash
+docker compose up -d --build
+```
+This builds and starts the container in detached mode. The API will be exposed on:
+`http://localhost:18273`
+
+### Updating After Code Changes
+
+To force Docker to pull the latest commit from the Git repository and rebuild:
+```bash
+docker compose build --no-cache
+docker compose up -d --build
+```
+
+### Viewing Logs
+
+To stream the application logs:
+```bash
+docker logs -f sqlite-gateway
+```
+
+### Checking Running Containers
+
+To check the container status:
+```bash
+docker ps
+```
+
+### Stopping the Container
+
+To stop and remove the container (preserving database volume data):
+```bash
+docker compose down
+```
+
+---
+
 ## API Documentation
 
 ### 1. Health Check
@@ -57,7 +102,7 @@ Check if the server and database are running.
 
 **Example:**
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:18273/health
 ```
 
 ### 2. Import CSV or Excel File
@@ -71,7 +116,7 @@ Import a CSV or XLSX file to dynamically create/update a table and load its data
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/import-csv \
+curl -X POST http://localhost:18273/import-csv \
   -F "tableName=employees" \
   -F "file=@/path/to/your/file.csv"
 ```
@@ -91,7 +136,7 @@ Run an arbitrary SQL query on the database. If `ALLOW_WRITE_QUERIES=false`, only
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/query \
+curl -X POST http://localhost:18273/query \
   -H "Content-Type: application/json" \
   -d '{"sql": "SELECT * FROM employees LIMIT 10"}'
 ```
@@ -101,7 +146,7 @@ List all tables in the SQLite database.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/query \
+curl -X POST http://localhost:18273/query \
   -H "Content-Type: application/json" \
   -d '{"sql": "SELECT name FROM sqlite_master WHERE type='\''table'\''"}'
 ```
@@ -111,7 +156,7 @@ Get column information for a specific table.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/query \
+curl -X POST http://localhost:18273/query \
   -H "Content-Type: application/json" \
   -d '{"sql": "PRAGMA table_info('\''employees'\'')"}'
 ```
