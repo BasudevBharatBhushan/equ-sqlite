@@ -1,0 +1,171 @@
+{
+  "info": {
+    "name": "SQLite Reporting Server",
+    "description": "A collection to test the endpoints of the lightweight Node.js SQLite reporting server.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "health"
+          ]
+        },
+        "description": "Checks if the server and database are healthy."
+      },
+      "response": []
+    },
+    {
+      "name": "Import CSV/XLSX File",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "tableName",
+              "value": "sample_table",
+              "type": "text",
+              "description": "The name of the table to create or append data to."
+            },
+            {
+              "key": "file",
+              "type": "file",
+              "src": [],
+              "description": "Select a .csv or .xlsx file from your computer."
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:3000/import-csv",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "import-csv"
+          ]
+        },
+        "description": "Upload a CSV or XLSX file to dynamically create a table and import data."
+      },
+      "response": []
+    },
+    {
+      "name": "Discover Schema (List Tables)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sql\": \"SELECT name FROM sqlite_master WHERE type='table'\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/query",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "query"
+          ]
+        },
+        "description": "Lists all tables in the SQLite database."
+      },
+      "response": []
+    },
+    {
+      "name": "Discover Schema (List Fields)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sql\": \"PRAGMA table_info('sample_table')\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/query",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "query"
+          ]
+        },
+        "description": "Gets the column schema information for a specific table."
+      },
+      "response": []
+    },
+    {
+      "name": "Execute Read Query",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sql\": \"SELECT * FROM sample_table LIMIT 10\",\n  \"params\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/query",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "query"
+          ]
+        },
+        "description": "Executes a SELECT query to retrieve data from a table."
+      },
+      "response": []
+    }
+  ]
+}

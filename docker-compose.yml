@@ -1,0 +1,16 @@
+services:
+  sqlite-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sqlite-gateway
+    restart: unless-stopped
+    ports:
+      - "18273:18273"
+    volumes:
+      - sqlite_data:/app/data
+    env_file:
+      - .env
+
+volumes:
+  sqlite_data:
