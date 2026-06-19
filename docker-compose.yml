@@ -6,14 +6,13 @@ services:
     container_name: sqlite-gateway
     restart: unless-stopped
     ports:
-      - "18273:18273"
+      - '18273:18273'
     volumes:
       - sqlite_data:/app/data
     env_file:
       - .env
     environment:
       - SQLITE_DB_PATH=/app/data/data.db
-
 
 volumes:
   sqlite_data:
