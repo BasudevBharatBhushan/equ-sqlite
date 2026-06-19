@@ -9,26 +9,39 @@ A lightweight Bun service that exposes a read-only SQLite database over HTTP for
 - Bearer token authentication protects all endpoints except `GET /health`.
 - SQLite is opened in readonly mode through Bun's built-in `bun:sqlite` driver.
 
-## Prerequisites
+## Prerequisites & Installation
 
-- Bun 1.x
-- An existing SQLite database file
-- Docker and Docker Compose, if deploying with containers
+- **Bun 1.x**:
+  If you don't have Bun installed, you can install it using:
+  - **macOS/Linux (via Homebrew)**:
+    ```bash
+    brew install oven-sh/bun/bun
+    ```
+  - **macOS/Linux/WSL (via Curl)**:
+    ```bash
+    curl -fsSL https://bun.sh/install | bash
+    ```
+- **SQLite**: An existing SQLite database file.
+- **Docker & Docker Compose**: (Optional) if deploying or running with containers.
 
-## Configuration
+## Initialization & Configuration
 
-Copy `.env.example` to `.env` and set these values:
+1. **Configure Environment Variables**:
+   Copy `.env.example` to `.env` and set the appropriate configuration:
+   ```bash
+   cp .env.example .env
+   ```
+   *Note: `SQLITE_DB_PATH` must point to an existing database file because the service opens SQLite in readonly mode.*
 
-```bash
-PORT=18273
-SQLITE_DB_PATH=./data.db
-API_KEY=replace-with-a-long-random-secret
-CORS_ORIGIN=*
-```
-
-`SQLITE_DB_PATH` must point to an existing database file because the service opens SQLite in readonly mode.
+2. **Ensure Database File Exists**:
+   Because the server opens the database in strict read-only mode, the file must exist before starting the server. If you don't have a database ready and want to run tests locally, you can create a dummy database:
+   ```bash
+   sqlite3 data.db "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT); INSERT INTO users (name) VALUES ('Alice'), ('Bob');"
+   ```
 
 ## Run Locally
+
+Install the dependencies (lockfile setup) and start the server:
 
 ```bash
 bun install

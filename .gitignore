@@ -3,3 +3,8 @@ dist
 .env
 uploads
 reporting.db
+data.db
+*.db
+*.sqlite
+*.sqlite3
+

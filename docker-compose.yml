@@ -11,6 +11,9 @@ services:
       - sqlite_data:/app/data
     env_file:
       - .env
+    environment:
+      - SQLITE_DB_PATH=/app/data/data.db
+
 
 volumes:
   sqlite_data:
