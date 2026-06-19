@@ -1,162 +1,125 @@
 # SQLite Reporting Server
 
-A lightweight Node.js + Express + TypeScript + SQLite application that acts as a simple SQL reporting server.
+A lightweight Bun service that exposes a read-only SQLite database over HTTP for reporting clients such as KiBiAI.
 
 ## Features
 
-- **Dynamic CSV / Excel Import**: Automatically create tables and import data from `.csv` and `.xlsx` files. If tables already exist, missing columns are added seamlessly.
-- **SQL Execution Endpoint**: Discover schema and execute purely read-only queries (`SELECT`, `PRAGMA`, `WITH`). Mutating queries (`INSERT`, `DROP`, `UPDATE`) are blocked by default for security.
-- **SQLite isolation**: DB interactions are abstracted inside the service layer, making it trivial to migrate to PostgreSQL.
+- `POST /query` accepts parameterized `SELECT` and `WITH` SQL and returns JSON rows.
+- `GET /schema` returns user tables, views, columns, indexes, and foreign keys.
+- Bearer token authentication protects all endpoints except `GET /health`.
+- SQLite is opened in readonly mode through Bun's built-in `bun:sqlite` driver.
 
 ## Prerequisites
 
-- Node.js (v18+ recommended)
-- npm
-- Docker and Docker Compose (if deploying via containers)
+- Bun 1.x
+- An existing SQLite database file
+- Docker and Docker Compose, if deploying with containers
 
-## Installation
+## Configuration
 
-1. Clone or download the source code.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy `.env.example` to `.env` and adjust variables if needed:
-   ```bash
-   cp .env.example .env
-   ```
+Copy `.env.example` to `.env` and set these values:
 
-### Configuration (`.env`)
-- `PORT`: The port the server runs on (default: `18273`).
-- `ALLOW_WRITE_QUERIES`: Set to `true` to allow modifying database tables directly via the `/query` endpoint. Default is `false` (read-only allowed).
-
-## Development
-
-To run the server locally with auto-reload:
 ```bash
-npm run dev
+PORT=18273
+SQLITE_DB_PATH=./data.db
+API_KEY=replace-with-a-long-random-secret
+CORS_ORIGIN=*
 ```
 
-## Production Build (Local Host)
+`SQLITE_DB_PATH` must point to an existing database file because the service opens SQLite in readonly mode.
 
-To compile TypeScript source to JavaScript:
+## Run Locally
+
 ```bash
-npm run build
+bun install
+bun run dev
 ```
 
-To run the compiled output:
-```bash
-npm start
-```
+The API defaults to `http://localhost:18273`.
 
-## Docker & Deployment
+## Docker
 
-The application is configured to build directly from the remote Git repository (`master` branch). The SQLite database is persisted inside a Docker volume so data survives container updates and restarts.
+Mount an existing database into `/app/data` and set `SQLITE_DB_PATH` to that file path.
 
-### Initial Deployment
-
-Run this command on your deployment server (e.g. AWS EC2) or local environment:
 ```bash
 docker compose up -d --build
 ```
-This builds and starts the container in detached mode. The API will be exposed on:
-`http://localhost:18273`
 
-### Updating After Code Changes
+The compose file reads environment variables from `.env`.
 
-To force Docker to pull the latest commit from the Git repository and rebuild:
-```bash
-docker compose build --no-cache
-docker compose up -d --build
-```
+## API
 
-### Viewing Logs
+### Health
 
-To stream the application logs:
-```bash
-docker logs -f sqlite-gateway
-```
-
-### Checking Running Containers
-
-To check the container status:
-```bash
-docker ps
-```
-
-### Stopping the Container
-
-To stop and remove the container (preserving database volume data):
-```bash
-docker compose down
-```
-
----
-
-## API Documentation
-
-### 1. Health Check
-Check if the server and database are running.
-
-**Endpoint:** `GET /health`
-
-**Example:**
 ```bash
 curl http://localhost:18273/health
 ```
 
-### 2. Import CSV or Excel File
-Import a CSV or XLSX file to dynamically create/update a table and load its data.
+### Query
 
-**Endpoint:** `POST /import-csv`
-
-**Parameters (multipart/form-data):**
-- `tableName`: (String) The name of the table to create or insert into.
-- `file`: (File) The `.csv` or `.xlsx` file to upload.
-
-**Example:**
 ```bash
-curl -X POST http://localhost:18273/import-csv \
-  -F "tableName=employees" \
-  -F "file=@/path/to/your/file.csv"
+curl -X POST http://localhost:18273/query \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"sql":"SELECT * FROM invoices WHERE date BETWEEN ?1 AND ?2 LIMIT ?3","params":["2025-01-01","2025-12-31",1000]}'
 ```
 
-### 3. Execute Query
-Run an arbitrary SQL query on the database. If `ALLOW_WRITE_QUERIES=false`, only `SELECT`, `PRAGMA`, and `WITH` statements are allowed.
+Successful response:
 
-**Endpoint:** `POST /query`
-
-**Request Body (JSON):**
 ```json
 {
-  "sql": "SELECT * FROM employees LIMIT 10",
-  "params": []
+  "rows": [],
+  "rowCount": 0,
+  "columns": ["id", "date", "amount"]
 }
 ```
 
-**Example:**
+### Schema
+
 ```bash
-curl -X POST http://localhost:18273/query \
-  -H "Content-Type: application/json" \
-  -d '{"sql": "SELECT * FROM employees LIMIT 10"}'
+curl http://localhost:18273/schema \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
-### 4. Table Discovery
-List all tables in the SQLite database.
+Successful response:
 
-**Example:**
-```bash
-curl -X POST http://localhost:18273/query \
-  -H "Content-Type: application/json" \
-  -d '{"sql": "SELECT name FROM sqlite_master WHERE type='\''table'\''"}'
+```json
+{
+  "schema": [
+    {
+      "name": "invoices",
+      "type": "table",
+      "columns": [],
+      "indexes": [],
+      "foreignKeys": []
+    }
+  ]
+}
 ```
 
-### 5. Field Discovery
-Get column information for a specific table.
+## Smoke Tests
 
-**Example:**
+Unauthorized requests should fail:
+
 ```bash
-curl -X POST http://localhost:18273/query \
+curl -i -X POST http://localhost:18273/query \
   -H "Content-Type: application/json" \
-  -d '{"sql": "PRAGMA table_info('\''employees'\'')"}'
+  -d '{"sql":"SELECT 1"}'
+```
+
+Mutating SQL should fail:
+
+```bash
+curl -i -X POST http://localhost:18273/query \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"sql":"DROP TABLE invoices"}'
+```
+
+CORS preflight should return `204`:
+
+```bash
+curl -i -X OPTIONS http://localhost:18273/query \
+  -H "Origin: http://localhost:3000" \
+  -H "Access-Control-Request-Method: POST"
 ```

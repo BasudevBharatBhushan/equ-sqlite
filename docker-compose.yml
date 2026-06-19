@@ -1,7 +1,7 @@
 services:
   sqlite-gateway:
     build:
-      context: https://github.com/BasudevBharatBhushan/equ-sqlite.git#master
+      context: .
       dockerfile: Dockerfile
     container_name: sqlite-gateway
     restart: unless-stopped

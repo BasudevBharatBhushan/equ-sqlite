@@ -1,9 +1,19 @@
 {
   "info": {
-    "name": "SQLite Reporting Server",
-    "description": "A collection to test the endpoints of the lightweight Node.js SQLite reporting server.",
+    "name": "SQLite Bun Reporting Server",
+    "description": "Postman collection for the Bun SQLite read-only HTTP server.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:18273"
+    },
+    {
+      "key": "apiKey",
+      "value": "replace-with-your-api-key"
+    }
+  ],
   "item": [
     {
       "name": "Health Check",
@@ -11,71 +21,27 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/health",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "3000",
-          "path": [
-            "health"
-          ]
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
         },
-        "description": "Checks if the server and database are healthy."
+        "description": "No auth required. Confirms the server is reachable."
       },
       "response": []
     },
     {
-      "name": "Import CSV/XLSX File",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "formdata",
-          "formdata": [
-            {
-              "key": "tableName",
-              "value": "sample_table",
-              "type": "text",
-              "description": "The name of the table to create or append data to."
-            },
-            {
-              "key": "file",
-              "type": "file",
-              "src": [],
-              "description": "Select a .csv or .xlsx file from your computer."
-            }
-          ]
-        },
-        "url": {
-          "raw": "http://localhost:3000/import-csv",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "3000",
-          "path": [
-            "import-csv"
-          ]
-        },
-        "description": "Upload a CSV or XLSX file to dynamically create a table and import data."
-      },
-      "response": []
-    },
-    {
-      "name": "Discover Schema (List Tables)",
+      "name": "Query - Unauthorized",
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
+            "value": "application/json"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"sql\": \"SELECT name FROM sqlite_master WHERE type='table'\"\n}",
+          "raw": "{\n  \"sql\": \"SELECT 1 AS value\",\n  \"params\": []\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -83,34 +49,31 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3000/query",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "3000",
-          "path": [
-            "query"
-          ]
+          "raw": "{{baseUrl}}/query",
+          "host": ["{{baseUrl}}"],
+          "path": ["query"]
         },
-        "description": "Lists all tables in the SQLite database."
+        "description": "Expected response: 401 Unauthorized."
       },
       "response": []
     },
     {
-      "name": "Discover Schema (List Fields)",
+      "name": "Query - Parameterized SELECT",
       "request": {
         "method": "POST",
         "header": [
           {
+            "key": "Authorization",
+            "value": "Bearer {{apiKey}}"
+          },
+          {
             "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
+            "value": "application/json"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"sql\": \"PRAGMA table_info('sample_table')\"\n}",
+          "raw": "{\n  \"sql\": \"SELECT ? AS value WHERE ? = ?\",\n  \"params\": [123, 1, 1]\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -118,34 +81,31 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3000/query",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "3000",
-          "path": [
-            "query"
-          ]
+          "raw": "{{baseUrl}}/query",
+          "host": ["{{baseUrl}}"],
+          "path": ["query"]
         },
-        "description": "Gets the column schema information for a specific table."
+        "description": "Expected response: rows with value 123, rowCount 1, columns [\"value\"]."
       },
       "response": []
     },
     {
-      "name": "Execute Read Query",
+      "name": "Query - Empty Result With Columns",
       "request": {
         "method": "POST",
         "header": [
           {
+            "key": "Authorization",
+            "value": "Bearer {{apiKey}}"
+          },
+          {
             "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
+            "value": "application/json"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"sql\": \"SELECT * FROM sample_table LIMIT 10\",\n  \"params\": []\n}",
+          "raw": "{\n  \"sql\": \"SELECT 1 AS value WHERE 0\",\n  \"params\": []\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -153,17 +113,85 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3000/query",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "3000",
-          "path": [
-            "query"
-          ]
+          "raw": "{{baseUrl}}/query",
+          "host": ["{{baseUrl}}"],
+          "path": ["query"]
         },
-        "description": "Executes a SELECT query to retrieve data from a table."
+        "description": "Expected response: rows [], rowCount 0, columns [\"value\"]."
+      },
+      "response": []
+    },
+    {
+      "name": "Query - Forbidden Mutation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{apiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sql\": \"DROP TABLE invoices\",\n  \"params\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/query",
+          "host": ["{{baseUrl}}"],
+          "path": ["query"]
+        },
+        "description": "Expected response: 403 Only SELECT and WITH queries are allowed."
+      },
+      "response": []
+    },
+    {
+      "name": "Schema Discovery",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/schema",
+          "host": ["{{baseUrl}}"],
+          "path": ["schema"]
+        },
+        "description": "Returns user tables/views with columns, indexes, and foreign keys."
+      },
+      "response": []
+    },
+    {
+      "name": "CORS Preflight",
+      "request": {
+        "method": "OPTIONS",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "http://localhost:3000"
+          },
+          {
+            "key": "Access-Control-Request-Method",
+            "value": "POST"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/query",
+          "host": ["{{baseUrl}}"],
+          "path": ["query"]
+        },
+        "description": "Expected response: 204 with CORS headers."
       },
       "response": []
     }
